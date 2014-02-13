@@ -942,8 +942,7 @@ class TestFurl(unittest.TestCase):
 
     def test_unicode(self):
         url = u'http://ru.wikipedia.org/wiki/Восход_(ракета-носитель)'
-        # Accept a unicode URL without raising an exception.
-        f = furl.furl(url)
+        f = furl.furl(url)  # Accept unicode without raising an exception.
         assert not isinstance(f.url, unicode)  # URLs cannot contain unicode.
 
     def test_scheme(self):

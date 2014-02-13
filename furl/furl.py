@@ -42,7 +42,7 @@ DEFAULT_PORTS = {
     'ssh': 22,
     'http': 80,
     'https': 443,
-}
+    }
 
 # List of schemes that don't require two slashes after the colon. For example,
 # 'mailto:user@google.com' instead of 'mailto://user@google.com'. Scheme
@@ -52,7 +52,7 @@ DEFAULT_PORTS = {
 # an explicit list. There are many such schemes in various URIs.
 COLON_SEPARATED_SCHEMES = [
     'mailto',
-]
+    ]
 
 
 class Path(object):
@@ -169,7 +169,7 @@ class Path(object):
         Returns: <self>.
         """
         if str(self):
-            normalized = normpath(str(self)) + '/' * self.isdir
+            normalized = normpath(str(self)) + ('/' * self.isdir)
             if normalized.startswith('//'):  # http://bugs.python.org/636648
                 normalized = '/' + normalized.lstrip('/')
             self.load(normalized)
@@ -584,8 +584,9 @@ class Query(object):
             pairs = map(lambda p: (p[0], '') if len(p) == 1
                         else (p[0], p[1]), pairs)
             for key, value in pairs:
-                if (not is_valid_encoded_query_key(key) or
-                        not is_valid_encoded_query_value(value)):
+                valid_key = is_valid_encoded_query_key(key)
+                valid_value = is_valid_encoded_query_value(value)
+                if not valid_key or not valid_value:
                     s = ("Improperly encoded query string received: '%s'. "
                          "Proceeding, but did you mean '%s'?" %
                          (querystr, urllib.urlencode(pairs)))
@@ -1074,8 +1075,8 @@ class furl(URLPathCompositionInterface, QueryCompositionInterface,
             <fragment_args>, and/or <fragment_separator>) are provided.
         Returns: <self>.
         """
-        if (netloc is not _absent and
-                (host is not _absent or port is not _absent)):
+        netloc_present = netloc is not _absent
+        if (netloc_present and (host is not _absent or port is not _absent)):
             s = ('Possible parameter overlap: <netloc> and <host> and/or '
                  '<port> provided. See furl.set() documentation for more '
                  'details.')
@@ -1198,10 +1199,9 @@ class furl(URLPathCompositionInterface, QueryCompositionInterface,
         return self.url == other.url
 
     def __setattr__(self, attr, value):
-        if all([not PathCompositionInterface.__setattr__(self, attr, value),
-                not QueryCompositionInterface.__setattr__(self, attr, value),
-                not FragmentCompositionInterface.__setattr__(self, attr, value)
-                ]):
+        if (not PathCompositionInterface.__setattr__(self, attr, value) and
+            not QueryCompositionInterface.__setattr__(self, attr, value) and
+            not FragmentCompositionInterface.__setattr__(self, attr, value)):
             object.__setattr__(self, attr, value)
 
     def __str__(self):
@@ -1230,7 +1230,6 @@ class furl(URLPathCompositionInterface, QueryCompositionInterface,
 
 
 def _get_scheme(url):
-    scheme = None
     if url.lstrip().startswith('//'):  # Protocol relative URL.
         return ''
     beforeColon = url[:max(0, url.find(':'))]
@@ -1242,7 +1241,6 @@ def _get_scheme(url):
 def _set_scheme(url, newscheme):
     scheme = _get_scheme(url)
     newscheme = newscheme or ''
-    separator = ':' if scheme in COLON_SEPARATED_SCHEMES else '://'
     newseparator = ':' if newscheme in COLON_SEPARATED_SCHEMES else '://'
     if scheme == '':  # Protocol relative URL.
         url = '%s:%s' % (newscheme, url)
@@ -1391,11 +1389,12 @@ def is_valid_port(port):
 def callable_attr(obj, attr):
     return hasattr(obj, attr) and callable(getattr(obj, attr))
 
+
 #
-# TODO(grun): These functions need to be expanded to reflect the fact
-# that the valid encoding for a URL Path segment is different from a
-# Fragment Path segment, and valid URL Query key and value encoding is
-# different than valid Fragment Query key and value encoding.
+# TODO(grun): These regex functions need to be expanded to reflect the
+# fact that the valid encoding for a URL Path segment is different from
+# a Fragment Path segment, and valid URL Query key and value encoding
+# is different than valid Fragment Query key and value encoding.
 #
 # For example, '?' and '#' don't need to be encoded in Fragment Path
 # segments but they must be encoded in URL Path segments.
@@ -1430,21 +1429,17 @@ def callable_attr(obj, attr):
 #
 VALID_ENCODED_PATH_SEGMENT_REGEX = re.compile(
     r'^([\w\-\.\~\:\@\!\$\&\'\(\)\*\+\,\;\=]|(\%[\da-fA-F][\da-fA-F]))*$')
-
-
 def is_valid_encoded_path_segment(segment):
     return bool(VALID_ENCODED_PATH_SEGMENT_REGEX.match(segment))
 
+
 VALID_ENCODED_QUERY_KEY_REGEX = re.compile(
     r'^([\w\-\.\~\:\@\!\$\&\'\(\)\*\+\,\;\/\?]|(\%[\da-fA-F][\da-fA-F]))*$')
-
-
 def is_valid_encoded_query_key(key):
     return bool(VALID_ENCODED_QUERY_KEY_REGEX.match(key))
 
+
 VALID_ENCODED_QUERY_VALUE_REGEX = re.compile(
     r'^([\w\-\.\~\:\@\!\$\&\'\(\)\*\+\,\;\/\?\=]|(\%[\da-fA-F][\da-fA-F]))*$')
-
-
 def is_valid_encoded_query_value(value):
     return bool(VALID_ENCODED_QUERY_VALUE_REGEX.match(value))
